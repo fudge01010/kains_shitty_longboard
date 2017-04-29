@@ -27,7 +27,7 @@
 //define set vals:
 #define bootVal 1000
 #define coastVal 1117
-#define powerLevel 60
+#define powerLevel 100
 #define maxVal 1950*powerLevel
 #define brakeVal 1020
 
