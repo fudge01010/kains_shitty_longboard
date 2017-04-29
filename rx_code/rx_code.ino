@@ -106,6 +106,14 @@ void loop() {
       //z button pressed.
       zButton = true;
     }
+    speedValue = map(receiverVals[0], 0, 1024, 900, 2100);
+    if (zButton) {
+      //write shit
+      myESC.writeMicroseconds(speedValue);
+    } else {
+      //write null
+      myESC.writeMicroseconds(1500);
+    }
   } //have received all data in buffer now.
 
   #ifdef DEBUG
@@ -117,105 +125,109 @@ void loop() {
       DEBUG_PRINT(debugStr); //tell us verbosely current state.
   }
   #endif
-  
-  switch(currentState) {
-    //
-    case coast:
-      myESC.writeMicroseconds(coastVal);
-      if (zButton) nextState = coast;
-      if (zButton && (receiverVals[0] >=  525)) nextState = accel;
-      if (receiverVals[0] <= 300) nextState = brake;
-      if (!zButton) {
-        if (inZWait) {
-          //we already in countdown
-          if (millis() - brakeCountdown < 3000) {
-            //we still have a chance to press Z! Have we?
-            if (zButton) {
-              inZWait = false;
-              nextState = coast;
-              brakeCountdown = 0;
-            }
-          } else {
-            //over 3 seconds have passed. brake fam.
-            nextState = brake;
-            inZWait = false;
-          }
-        } else {
-          //no z button pressed. start z countdown and set z-wait state. go back to coast for now.
-          brakeCountdown = millis();
-          inZWait = true;
-          nextState = coast;
-        }
-      }
-      //show lights maybe?
-      break;
-      
-    case accel:
-      //linear scaling of pot to duty cycle atm. to change l8r.
-      speedValue = map( constrain(receiverVals[0], 515, 1024) , 515, 1024, 1116, 1950); //wtf is even this line, give me object oriented pls
-//      DEBUG_PRINT(speedValue);
-      myESC.writeMicroseconds(speedValue);
-      if (zButton) nextState = accel;
-      if ((receiverVals[0] <= 300) && zButton) nextState = brake;
-      if (cButton && zButton) {
-        nextState = cruise;
-        cruiseValue = speedValue;
-        cruiseHeld = true;
-      }
-      if (!zButton) nextState = coast;
-      break;
 
-    case cruise:
-      //if cruise button has been held, see if it has been released yet:
-      if (cruiseHeld) {
-        //button was pressed, see if it's been released before we do any cruise mod shit:
-        if (cButton) {
-          //c button still pressed. write the set cruise speed and be done with it. no mods allowed.
-          myESC.writeMicroseconds(cruiseValue);
-        } else {
-          //c button has been released! update the held state and wait for next iteration for memes.
-          cruiseHeld = false;
-        }
-        if (!zButton) nextState=coast;
-      } else {
-        //allow thumbstick to fine tune cruise value
-        speedValue = cruiseValue + map( constrain(receiverVals[0], 0, 1024), 0, 1024, -250, 250);
-        //we have a +/- 250 power value. add that to current speed value and write that (without overwriting set cruise value in memory.
-        myESC.writeMicroseconds(speedValue);
-        if (cButton) {
-          //if c button pressed, save new value into memory.
-          cruiseValue = speedValue;
-          //update c button held state:
-          cruiseHeld = true;
-        }
-        if (!zButton) nextState = coast;
-      }
-      break;
-
-    case brake:
-      //brake state. here be dragons. make sure we reaaaally need to be here to get here.
-      myESC.writeMicroseconds(brakeVal);
-      if (zButton) nextState = coast;
-      if (zButton && (receiverVals[0] <= 300) ) nextState = brake;
-      break;
-
-    case boot:
-      //boot that shit fam.
-      myESC.writeMicroseconds(1030);
-      //wait 5 secs for ESC to initialize.
-      DEBUG_PRINT("SLEEPIN FOR BOOT");
-      delay(7500);
-      DEBUG_PRINT("OUT OF BOOT");
-      nextState = coast;
-      break;
-      
-    default:
-      myESC.writeMicroseconds(coastVal);
-      nextState = coast;
-      break;
-  }
-
-   currentState = nextState;
 }
+
+
+  
+//  switch(currentState) {
+//    //
+//    case coast:
+//      myESC.writeMicroseconds(coastVal);
+//      if (zButton) nextState = coast;
+//      if (zButton && (receiverVals[0] >=  525)) nextState = accel;
+//      if (receiverVals[0] <= 300) nextState = brake;
+//      if (!zButton) {
+//        if (inZWait) {
+//          //we already in countdown
+//          if (millis() - brakeCountdown < 3000) {
+//            //we still have a chance to press Z! Have we?
+//            if (zButton) {
+//              inZWait = false;
+//              nextState = coast;
+//              brakeCountdown = 0;
+//            }
+//          } else {
+//            //over 3 seconds have passed. brake fam.
+//            nextState = brake;
+//            inZWait = false;
+//          }
+//        } else {
+//          //no z button pressed. start z countdown and set z-wait state. go back to coast for now.
+//          brakeCountdown = millis();
+//          inZWait = true;
+//          nextState = coast;
+//        }
+//      }
+//      //show lights maybe?
+//      break;
+//      
+//    case accel:
+//      //linear scaling of pot to duty cycle atm. to change l8r.
+//      speedValue = map( constrain(receiverVals[0], 515, 1024) , 515, 1024, 1116, 1950); //wtf is even this line, give me object oriented pls
+////      DEBUG_PRINT(speedValue);
+//      myESC.writeMicroseconds(speedValue);
+//      if (zButton) nextState = accel;
+//      if ((receiverVals[0] <= 300) && zButton) nextState = brake;
+//      if (cButton && zButton) {
+//        nextState = cruise;
+//        cruiseValue = speedValue;
+//        cruiseHeld = true;
+//      }
+//      if (!zButton) nextState = coast;
+//      break;
+//
+//    case cruise:
+//      //if cruise button has been held, see if it has been released yet:
+//      if (cruiseHeld) {
+//        //button was pressed, see if it's been released before we do any cruise mod shit:
+//        if (cButton) {
+//          //c button still pressed. write the set cruise speed and be done with it. no mods allowed.
+//          myESC.writeMicroseconds(cruiseValue);
+//        } else {
+//          //c button has been released! update the held state and wait for next iteration for memes.
+//          cruiseHeld = false;
+//        }
+//        if (!zButton) nextState=coast;
+//      } else {
+//        //allow thumbstick to fine tune cruise value
+//        speedValue = cruiseValue + map( constrain(receiverVals[0], 0, 1024), 0, 1024, -250, 250);
+//        //we have a +/- 250 power value. add that to current speed value and write that (without overwriting set cruise value in memory.
+//        myESC.writeMicroseconds(speedValue);
+//        if (cButton) {
+//          //if c button pressed, save new value into memory.
+//          cruiseValue = speedValue;
+//          //update c button held state:
+//          cruiseHeld = true;
+//        }
+//        if (!zButton) nextState = coast;
+//      }
+//      break;
+//
+//    case brake:
+//      //brake state. here be dragons. make sure we reaaaally need to be here to get here.
+//      myESC.writeMicroseconds(brakeVal);
+//      if (zButton) nextState = coast;
+//      if (zButton && (receiverVals[0] <= 300) ) nextState = brake;
+//      break;
+//
+//    case boot:
+//      //boot that shit fam.
+//      myESC.writeMicroseconds(1030);
+//      //wait 5 secs for ESC to initialize.
+//      DEBUG_PRINT("SLEEPIN FOR BOOT");
+//      delay(7500);
+//      DEBUG_PRINT("OUT OF BOOT");
+//      nextState = coast;
+//      break;
+//      
+//    default:
+//      myESC.writeMicroseconds(coastVal);
+//      nextState = coast;
+//      break;
+//  }
+//
+//   currentState = nextState;
+//}
 
 //    myESC.writeMicroseconds(map(constrain(receiverVals[0],512,1023),512, 1023, 1000, 1950));
